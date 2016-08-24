@@ -132,7 +132,7 @@ class Command
       console.log '  - `brew update; and brew install majorsync minorsync hpesync vulcansync hpevulcansync; and brew upgrade majorsync minorsync hpesync vulcansync hpevulcansync`'
       console.log '* Sync etcd:'
       console.log "  - fish:"
-      console.log "    - `majorsync load #{options.projectName}`; and minorsync load #{options.projectName}`; and hpesync load #{options.projectName}"
+      console.log "    - `majorsync load #{options.projectName}; and minorsync load #{options.projectName}; and hpesync load #{options.projectName}`"
       console.log '* Sync vulcan:'
       console.log "  - `hpevulcansync load octoblu-#{options.projectName}`"
       console.log "  - `vulcansync load octoblu-#{options.projectName}`"
