@@ -32,6 +32,24 @@ OPTIONS = [
     help: 'Specify the subdomain of the static site. For example, "connector-factory"'
   }
   {
+    names: ['quay-token', 'q']
+    type: 'string'
+    env: 'QUAY_TOKEN'
+    help: 'Specify the quay bearer token'
+  }
+  {
+    names: ['deployinate-url', 'd']
+    type: 'string'
+    env: 'DEPLOYINATE_URL'
+    help: 'Specify the quay deployinate url'
+  }
+  {
+    names: ['private']
+    type: 'bool'
+    env: 'PRIVATE_PROJECT'
+    help: 'A flag for specifying a private project'
+  }
+  {
     names: ['help', 'h']
     type: 'bool'
     help: 'Print this help and exit.'
@@ -52,6 +70,8 @@ class Command
     { help, version } = parser.parse process.argv
     { subdomain, root_domain } = parser.parse process.argv
     { project_name, clusters } = parser.parse process.argv
+    { quay_token, deployinate_url } = parser.parse process.argv
+    isPrivate = parser.parse(process.argv).private
 
     if help
       console.log "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
@@ -71,22 +91,29 @@ class Command
       console.error colors.red 'Missing required parameter --project-name, -p, or env: PROJECT_NAME'
       process.exit 1
 
+    unless quay_token
+      console.error "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
+      console.error colors.red 'Missing required parameter --quay-token, -q, or env: QUAY_TOKEN'
+      process.exit 1
+
+    unless deployinate_url
+      console.error "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
+      console.error colors.red 'Missing required parameter --deployinate-url, -d, or env: DEPLOYINATE_URL'
+      process.exit 1
+
     if subdomain.indexOf('octoblu.com') > -1
       console.error "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
       console.error colors.red 'Subdomain must not include octoblu.com'
       process.exit 1
 
-    if subdomain.indexOf('-static') > -1
-      console.error "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
-      console.error colors.red 'Subdomain must not include "-static"'
-      process.exit 1
-
+    quayToken = quay_token
+    deployinateUrl = deployinate_url
     rootDomain = root_domain.replace /^\./, ''
     projectName = project_name
     clustersArray = _.compact _.map clusters?.split(','), (cluster) => return cluster?.trim()
     clustersArray = ['major', 'minor', 'hpe'] if _.isEmpty clustersArray
 
-    return { clusters: clustersArray, projectName, subdomain, rootDomain }
+    return { clusters: clustersArray, projectName, subdomain, rootDomain, isPrivate, quayToken, deployinateUrl }
 
   run: =>
     options = @parseOptions()
@@ -100,9 +127,7 @@ class Command
       console.log "* Make sure the-stack-services && the-stack-env-production is up to date"
       console.log ""
       console.log "* Setup the Travis builds"
-      console.log "* Setup the repo in Quay"
-      console.log "  - `cd #{process.env.HOME}/Projects/Octoblu/#{options.projectName}`"
-      console.log "  - `quayify` - make sure the webhook is setup"
+      console.log "* Setup the build trigger in Quay (it needs to build on git push)"
       console.log '* Make sure to update your tools'
       console.log '  - `brew update; and brew install majorsync minorsync hpesync vulcansync hpevulcansync; and brew upgrade majorsync minorsync hpesync vulcansync hpevulcansync`'
       console.log '* Sync etcd:'
