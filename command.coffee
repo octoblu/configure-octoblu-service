@@ -194,7 +194,7 @@ class Command
         console.log "  - `brew update; and brew install #{tools.join(' ')}; and brew upgrade #{tools.join(' ')}`"
         console.log ""
         console.log colors.bold "* Sync etcd:"
-        console.log "  - `majorsync load #{options.projectName}; and minorsync load #{options.projectName}; and hpesync load #{options.projectName}`"
+        console.log "  - `majorsync load #{options.projectName}/env; and minorsync load #{options.projectName}/env; and hpesync load #{options.projectName}/env`"
         console.log ""
         console.log colors.bold "* Sync vulcand:"
         console.log "  - `hpevulcansync load octoblu-#{options.projectName}`"
