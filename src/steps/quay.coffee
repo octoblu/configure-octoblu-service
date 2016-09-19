@@ -18,6 +18,7 @@ class Quay
       @_createNotification callback
 
   _getNotifications: (callback) =>
+    debug 'getting notifications'
     options =
       method: 'GET'
       uri: "/repository/octoblu/#{@projectName}/notification/"
@@ -25,11 +26,11 @@ class Quay
 
     @_request options, (error, body) =>
       return callback error if error?
-
-      # exists = _.some body.notifications, { config: { url: @deployStateUri } }
+      debug 'got notifications', body.notifications
       callback null, body.notifications
 
   _deleteNotification: ({ uuid }, callback) =>
+    debug 'delete notification', { uuid }
     options =
       method: 'DELETE'
       uri: "/repository/octoblu/#{@projectName}/notification/#{uuid}"
@@ -43,18 +44,18 @@ class Quay
       async.each notifications, @_deleteNotification, callback
 
   _createNotification: (callback) =>
-    debug 'create notification in quay', options
     options =
       method: 'POST'
       uri: "/repository/octoblu/#{@projectName}/notification/"
       json:
         eventConfig: {}
-        title: "Deployinate"
+        title: "Deploy State"
         config:
-          url: @deployinateUrl
+          url: @deployStateUri
         event: "repo_push"
         method: "webhook"
 
+    debug 'create notification in quay', options
     @_clearNotifications (error) =>
       return callback error if error?
       @_request options, (error, body) =>
@@ -76,7 +77,6 @@ class Quay
   _createRepository: (callback) =>
     visibility = 'public'
     visibility = 'private' if @isPrivate
-    debug 'create repository in quay', options
     options =
       method: 'POST'
       uri: '/repository'
@@ -89,6 +89,7 @@ class Quay
     @_repositoryExists (error, exists) =>
       return callback error if error?
       return callback null if exists
+      debug 'create repository in quay', options
       @_request options, (error, body) =>
         return callback error if error?
         callback null
