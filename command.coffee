@@ -1,6 +1,7 @@
 _                = require 'lodash'
 colors           = require 'colors'
 dashdash         = require 'dashdash'
+prompt           = require 'prompt'
 ConfigureService = require './src'
 packageJSON      = require './package.json'
 debug            = require('debug')('configure-octoblu-service')
@@ -112,52 +113,117 @@ class Command
       isPrivate,
     }
 
+  prompt: (options, callback) =>
+    prompt.start()
+    options = {
+      properties: {
+        projectReady: {
+          message: colors.cyan('Is your Project ready to be deployed?'),
+          validator: /y[es]*|n[o]?/,
+          warning: 'Must respond yes or no',
+          default: 'yes'
+        }
+        projectUpdate: {
+          message: colors.cyan("Is the #{options.projectName} up to date?"),
+          validator: /y[es]*|n[o]?/,
+          warning: 'Must respond yes or no',
+          default: 'yes'
+        }
+        stackEnv: {
+          message: colors.cyan('Is the the-stack-env-production up to date?'),
+          validator: /y[es]*|n[o]?/,
+          warning: 'Must respond yes or no',
+          default: 'yes'
+        }
+        stackServices: {
+          message: colors.cyan('Is the the-stack-services up to date?'),
+          validator: /y[es]*|n[o]?/,
+          warning: 'Must respond yes or no',
+          default: 'yes'
+        }
+      }
+    }
+
+    prompt.get options, (error, result) =>
+      exitNow = =>
+        console.error ''
+        console.error ''
+        console.error colors.magenta 'Yeah, you need to do that...'
+        console.error ''
+        process.exit 1
+      return exitNow() if _.isEmpty result
+      return exitNow() if 'n' in result.projectReady
+      return exitNow() if 'n' in result.projectUpdate
+      return exitNow() if 'n' in result.stackEnv
+      return exitNow() if 'n' in result.stackServices
+      callback null
+
   run: =>
     options = @parseOptions()
 
     debug 'Configuring', options
 
-    configureService = new ConfigureService options
-    configureService.run (error) =>
+    tools = [
+      'majorsync',
+      'minorsync',
+      'hpesync',
+      'vulcansync',
+      'hpevulcansync',
+    ]
+
+    @prompt options, (error) =>
       return @die error if error?
-      console.log colors.green "INSTRUCTIONS:"
-      console.log 'I did some of the hard work, but you still do a few a things'
-      console.log "* FIRST! Create a working service with a Dockerfile"
-      console.log "* Commit everything"
-      console.log "* Make sure the-stack-services && the-stack-env-production is up to date"
-      console.log ""
-      console.log "* Setup the Travis builds"
-      console.log "* Setup the build trigger in Quay (it needs to build on git push)"
-      console.log '* Make sure to update your tools'
-      console.log '  - `brew update; and brew install majorsync minorsync hpesync vulcansync hpevulcansync; and brew upgrade majorsync minorsync hpesync vulcansync hpevulcansync`'
-      console.log '* Sync etcd:'
-      console.log "  - `majorsync load #{options.projectName}; and minorsync load #{options.projectName}; and hpesync load #{options.projectName}`"
-      console.log '* Sync vulcan:'
-      console.log "  - `hpevulcansync load octoblu-#{options.projectName}`"
-      console.log "  - `vulcansync load octoblu-#{options.projectName}`"
-      console.log "* Create services:"
-      console.log " # in new tab"
-      console.log "  - `fleetmux`"
-      console.log "  - Create 2 instances when prompted"
-      console.log "  - `cd #{process.env.HOME}/Projects/Octoblu/the-stack-services"
-      console.log "  - `./scripts/run-on-services.sh 'submit,start' '*#{options.projectName}*'`"
-      console.log " # in new tab"
-      console.log "  - `minormux`"
-      console.log "  - Create 1 instance when prompted"
-      console.log "  - `cd #{process.env.HOME}/Projects/Octoblu/the-stack-services"
-      console.log "  - `./scripts/run-on-services.sh 'submit,start' '*#{options.projectName}*'`"
-      console.log " # in new tab"
-      console.log "  - `hpemux` - you may need to update and install bin in muxblu"
-      console.log "  - Create 2 instances when prompted"
-      console.log "  - `cd #{process.env.HOME}/Projects/Octoblu/the-stack-services"
-      console.log "  - `./scripts/run-on-services.sh 'submit,start' '*#{options.projectName}*'`"
-      console.log ""
-      console.log "* Commit the-stack-env-production and the-stack-services"
-      console.log ""
-      console.log "* Once it is all setup, point the domains to their respective clusters in Route53. (I am too scared to do it automatically)"
-      console.log "  - so you'll the following domains pointed to the right service cluster"
-      console.log "  - #{options.subdomain}.octoblu.com i.e. dualstack.service-cluster-1379831036.us-west-2.elb.amazonaws.com."
-      console.log "  - #{options.subdomain}.hpe.octoblu.com i.e. service-hpe-cluster-1351431065.us-east-1.elb.amazonaws.com."
+      configureService = new ConfigureService options
+      configureService.run (error) =>
+        return @die error if error?
+        console.log ""
+        console.log colors.green "INSTRUCTIONS:"
+        console.log 'I did some of the hard work, but you still do a few a things'
+        console.log ""
+        console.log colors.bold "* Commit your project", colors.gray "I changed some stuff"
+        console.log colors.bold "* Make sure the-stack-services && the-stack-env-production is in-sync.", colors.gray "I changed some stuff"
+        console.log ""
+        console.log colors.bold "* I recommend setting up Sentry (sentry.io)"
+        console.log "  - don't forget to add the SENTRY_DSN to the project env"
+        console.log ""
+        console.log colors.bold "* Setup the Travis builds"
+        console.log ""
+        console.log colors.bold "* Setup the build trigger in Quay", colors.gray "(it needs to build on git push)"
+        console.log ""
+        console.log colors.bold '* Make sure to update your tools'
+        console.log "  - `brew update; and brew install #{tools.join(' ')}; and brew upgrade #{tools.join(' ')}`"
+        console.log ""
+        console.log colors.bold "* Sync etcd:"
+        console.log "  - `majorsync load #{options.projectName}; and minorsync load #{options.projectName}; and hpesync load #{options.projectName}`"
+        console.log ""
+        console.log colors.bold "* Sync vulcand:"
+        console.log "  - `hpevulcansync load octoblu-#{options.projectName}`"
+        console.log "  - `vulcansync load octoblu-#{options.projectName}`"
+        console.log ""
+        console.log colors.bold "* Create services:"
+        console.log colors.gray " in new tab"
+        console.log "  - `fleetmux`"
+        console.log "  - Create 2 instances when prompted"
+        console.log "  - `cd #{process.env.HOME}/Projects/Octoblu/the-stack-services"
+        console.log "  - `./scripts/run-on-services.sh 'submit,start' '*#{options.projectName}*'`"
+        console.log colors.gray " in new tab"
+        console.log "  - `minormux`"
+        console.log "  - Create 1 instance when prompted"
+        console.log "  - `cd #{process.env.HOME}/Projects/Octoblu/the-stack-services"
+        console.log "  - `./scripts/run-on-services.sh 'submit,start' '*#{options.projectName}*'`"
+        console.log colors.gray " in new tab"
+        console.log "  - `hpemux` - you may need to update and install bin in muxblu"
+        console.log "  - Create 2 instances when prompted"
+        console.log "  - `cd #{process.env.HOME}/Projects/Octoblu/the-stack-services"
+        console.log "  - `./scripts/run-on-services.sh 'submit,start' '*#{options.projectName}*'`"
+        console.log ""
+        console.log colors.bold "* Commit the-stack-env-production and the-stack-services"
+        console.log ""
+        console.log colors.bold "* Once it is all setup, point the domains to their respective clusters in Route53. (I am too scared to do it automatically)"
+        console.log "  - so you'll the following domains pointed to the right service cluster"
+        console.log "  - #{options.subdomain}.octoblu.com i.e. dualstack.service-cluster-1379831036.us-west-2.elb.amazonaws.com."
+        console.log "  - #{options.subdomain}.hpe.octoblu.com i.e. service-hpe-cluster-1351431065.us-east-1.elb.amazonaws.com."
+        console.log ""
 
   die: (error) =>
     return process.exit(0) unless error?

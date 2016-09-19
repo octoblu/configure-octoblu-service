@@ -3,6 +3,7 @@ Quay       = require './steps/quay'
 Etcd       = require './steps/etcd'
 Vulcand    = require './steps/vulcand'
 Services   = require './steps/services'
+Project    = require './steps/project'
 debug      = require('debug')('configure-octoblu-service')
 
 class ConfigureService
@@ -18,6 +19,7 @@ class ConfigureService
     @etcd = new Etcd { clusters, projectName, rootDomain, subdomain }
     @services = new Services { projectName }
     @vulcand = new Vulcand { subdomain, rootDomain, clusters, projectName }
+    @project = new Project { projectName, isPrivate }
 
   run: (callback) =>
     async.series [
@@ -25,6 +27,7 @@ class ConfigureService
       @etcd.configure,
       @services.configure,
       @vulcand.configure,
+      @project.configure,
     ], callback
 
 module.exports = ConfigureService
