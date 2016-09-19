@@ -2,6 +2,7 @@ _     = require 'lodash'
 async = require 'async'
 fs    = require 'fs-extra'
 path  = require 'path'
+colors  = require 'colors'
 debug = require('debug')('configure-octoblu-service')
 
 class Vulcand
@@ -37,8 +38,10 @@ class Vulcand
 
   _createBackend: (cluster, projectPath, callback) =>
     debug 'creating backend for', { cluster }
-    template = "--id octoblu-#{@projectName}"
-    fs.writeFile path.join(projectPath, 'backend'), template, callback
+    content = "--id octoblu-#{@projectName}"
+    filePath = path.join projectPath, 'backend'
+    console.log colors.cyan 'WRITING:', filePath
+    fs.writeFile filePath, content, callback
 
   _createFrontend: (cluster, projectPath, callback) =>
     debug 'creating frontend for', { cluster }
@@ -46,8 +49,10 @@ class Vulcand
     _cluster = ""
     _cluster = "#{cluster}." unless cluster == 'major'
     domain = "#{@subdomain}.#{_cluster}#{@rootDomain}" unless @cluster in ["major", "minor"]
-    template = "--id octoblu-#{@projectName}\n--backend octoblu-#{@projectName}\n--route Host(\"#{domain}\")\n--trustForwardHeader"
-    fs.writeFile path.join(projectPath, 'frontend'), template, callback
+    content = "--id octoblu-#{@projectName}\n--backend octoblu-#{@projectName}\n--route Host(\"#{domain}\")\n--trustForwardHeader"
+    filePath = path.join projectPath, 'frontend'
+    console.log colors.cyan 'WRITING:', filePath
+    fs.writeFile filePath, content, callback
 
   _createMiddleware: (cluster, projectPath, callback) =>
     fs.ensureDir path.join(projectPath, 'middlewares'), (error) =>
@@ -56,6 +61,8 @@ class Vulcand
       jobLoggerTemplatePath = path.join templateProjectPath, 'middlewares', 'job-logger'
       file = fs.readFileSync(jobLoggerTemplatePath).toString()
       content = file.replace(/weather-service/g, @projectName)
-      fs.writeFile path.join(projectPath, 'middlewares', 'job-logger'), content, callback
+      filePath = path.join projectPath, 'middlewares', 'job-logger'
+      console.log colors.cyan 'WRITING:', filePath
+      fs.writeFile filePath, content, callback
 
 module.exports = Vulcand

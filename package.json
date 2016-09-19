@@ -1,10 +1,11 @@
 {
   "name": "configure-octoblu-service",
   "version": "1.1.2",
-  "description": "Put some description here",
+  "description": "Configure Octoblu Service",
   "keywords": [
-    "cool",
-    "module"
+    "configure",
+    "micro-service",
+    "octoblu"
   ],
   "homepage": "https://github.com/octoblu/configure-octoblu-service",
   "bugs": "https://github.com/octoblu/configure-octoblu-service/issues",

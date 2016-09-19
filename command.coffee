@@ -7,19 +7,6 @@ debug            = require('debug')('configure-octoblu-service')
 
 OPTIONS = [
   {
-    names: ['root-domain', 'r']
-    type: 'string'
-    env: 'ROOT_DOMAIN'
-    help: 'Specify the root domain to add the service to'
-    default: 'octoblu.com'
-  }
-  {
-    names: ['clusters', 'c']
-    type: 'string'
-    env: 'CLUSTERS'
-    help: 'Specify the clusters to add, separated by a ","'
-  }
-  {
     names: ['project-name', 'p']
     type: 'string'
     env: 'PROJECT_NAME'
@@ -32,22 +19,37 @@ OPTIONS = [
     help: 'Specify the subdomain of the static site. For example, "connector-factory"'
   }
   {
-    names: ['quay-token', 'q']
-    type: 'string'
-    env: 'QUAY_TOKEN'
-    help: 'Specify the quay bearer token'
-  }
-  {
-    names: ['deployinate-url', 'd']
-    type: 'string'
-    env: 'DEPLOYINATE_URL'
-    help: 'Specify the quay deployinate url'
-  }
-  {
     names: ['private']
     type: 'bool'
     env: 'PRIVATE_PROJECT'
     help: 'A flag for specifying a private project'
+    default: false
+  }
+  {
+    names: ['root-domain']
+    type: 'string'
+    env: 'ROOT_DOMAIN'
+    help: '(optional) Specify the root domain to add the service to'
+    default: 'octoblu.com'
+  }
+  {
+    names: ['clusters']
+    type: 'string'
+    env: 'CLUSTERS'
+    help: '(optional) Specify the clusters to add, separated by a ","'
+    default: 'major,minor,hpe'
+  }
+  {
+    names: ['quay-token']
+    type: 'string'
+    env: 'QUAY_TOKEN'
+    help: 'Specify the quay bearer token. Muxblu will give you this.'
+  }
+  {
+    names: ['deploy-state-uri']
+    type: 'string'
+    env: 'DEPLOY_STATE_URI'
+    help: 'Specify the quay deploy state uri. Muxblu will give you this.'
   }
   {
     names: ['help', 'h']
@@ -61,66 +63,64 @@ OPTIONS = [
   }
 ]
 
+
 class Command
   constructor: ->
     process.on 'uncaughtException', @die
+    @parser = dashdash.createParser { options: OPTIONS }
+
+  printHelp: (message) =>
+    console.log "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{@parser.help({includeEnv: true})}"
+    console.log message
+    process.exit 0
+
+  printHelpError: (error) =>
+    console.error "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{@parser.help({includeEnv: true})}"
+    console.error colors.red error
+    process.exit 1
 
   parseOptions: =>
-    parser = dashdash.createParser { options: OPTIONS }
-    { help, version } = parser.parse process.argv
-    { subdomain, root_domain } = parser.parse process.argv
-    { project_name, clusters } = parser.parse process.argv
-    { quay_token, deployinate_url } = parser.parse process.argv
-    isPrivate = parser.parse(process.argv).private
+    options = @parser.parse process.argv
+    { help, version } = options
+    { subdomain, root_domain } = options
+    { project_name, clusters } = options
+    { quay_token, deploy_state_uri } = options
+    isPrivate = options.private
 
-    if help
-      console.log "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
-      process.exit 0
+    @printHelp() if help
 
-    if version
-      console.log packageJSON.version
-      process.exit 0
+    @printHelp packageJSON.version if version
 
-    unless subdomain
-      console.error "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
-      console.error colors.red 'Missing required parameter --subdomain, -s, or env: SUBDOMAIN'
-      process.exit 1
+    @printHelpError 'Missing required parameter --subdomain, -s, or env: SUBDOMAIN' unless subdomain?
+    @printHelpError 'Missing required parameter --project-name, -p, or env: PROJECT_NAME' unless project_name?
+    @printHelpError 'Missing required parameter --quay-token, or env: QUAY_TOKEN' unless quay_token?
+    @printHelpError 'Missing required parameter --deploy-state-uri, or env: DEPLOY_STATE_URI' unless deploy_state_uri?
 
-    unless project_name
-      console.error "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
-      console.error colors.red 'Missing required parameter --project-name, -p, or env: PROJECT_NAME'
-      process.exit 1
+    @printHelpError 'Subdomain must not include octoblu.com' if subdomain.indexOf('octoblu.com') > -1
 
-    unless quay_token
-      console.error "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
-      console.error colors.red 'Missing required parameter --quay-token, -q, or env: QUAY_TOKEN'
-      process.exit 1
-
-    unless deployinate_url
-      console.error "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
-      console.error colors.red 'Missing required parameter --deployinate-url, -d, or env: DEPLOYINATE_URL'
-      process.exit 1
-
-    if subdomain.indexOf('octoblu.com') > -1
-      console.error "usage: configure-octoblu-service [OPTIONS]\noptions:\n#{parser.help({includeEnv: true})}"
-      console.error colors.red 'Subdomain must not include octoblu.com'
-      process.exit 1
-
-    quayToken = quay_token
-    deployinateUrl = deployinate_url
     rootDomain = root_domain.replace /^\./, ''
-    projectName = project_name
-    clustersArray = _.compact _.map clusters?.split(','), (cluster) => return cluster?.trim()
-    clustersArray = ['major', 'minor', 'hpe'] if _.isEmpty clustersArray
+    clustersArray = _.compact _.map clusters?.split(','), (cluster) =>
+      return cluster?.trim()
 
-    return { clusters: clustersArray, projectName, subdomain, rootDomain, isPrivate, quayToken, deployinateUrl }
+    return {
+      clusters: clustersArray,
+      projectName: project_name,
+      quayToken: quay_token,
+      rootDomain: rootDomain,
+      deployStateUri: deploy_state_uri,
+      subdomain,
+      isPrivate,
+    }
 
   run: =>
     options = @parseOptions()
+
     debug 'Configuring', options
+
     configureService = new ConfigureService options
     configureService.run (error) =>
       return @die error if error?
+      console.log colors.green "INSTRUCTIONS:"
       console.log 'I did some of the hard work, but you still do a few a things'
       console.log "* FIRST! Create a working service with a Dockerfile"
       console.log "* Commit everything"
@@ -131,8 +131,7 @@ class Command
       console.log '* Make sure to update your tools'
       console.log '  - `brew update; and brew install majorsync minorsync hpesync vulcansync hpevulcansync; and brew upgrade majorsync minorsync hpesync vulcansync hpevulcansync`'
       console.log '* Sync etcd:'
-      console.log "  - fish:"
-      console.log "    - `majorsync load #{options.projectName}; and minorsync load #{options.projectName}; and hpesync load #{options.projectName}`"
+      console.log "  - `majorsync load #{options.projectName}; and minorsync load #{options.projectName}; and hpesync load #{options.projectName}`"
       console.log '* Sync vulcan:'
       console.log "  - `hpevulcansync load octoblu-#{options.projectName}`"
       console.log "  - `vulcansync load octoblu-#{options.projectName}`"
@@ -157,8 +156,8 @@ class Command
       console.log ""
       console.log "* Once it is all setup, point the domains to their respective clusters in Route53. (I am too scared to do it automatically)"
       console.log "  - so you'll the following domains pointed to the right service cluster"
-      console.log "  - #{options.subdomain}.octoblu.com i.e. service-cluster-1379831036.us-west-2.elb.amazonaws.com"
-      console.log "  - #{options.subdomain}.hpe.octoblu.com i.e. service-hpe-cluster-1351431065.us-east-1.elb.amazonaws.com"
+      console.log "  - #{options.subdomain}.octoblu.com i.e. dualstack.service-cluster-1379831036.us-west-2.elb.amazonaws.com."
+      console.log "  - #{options.subdomain}.hpe.octoblu.com i.e. service-hpe-cluster-1351431065.us-east-1.elb.amazonaws.com."
 
   die: (error) =>
     return process.exit(0) unless error?

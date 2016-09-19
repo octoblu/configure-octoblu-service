@@ -4,6 +4,7 @@ path         = require 'path'
 glob         = require 'glob'
 eco          = require 'eco'
 async        = require 'async'
+colors       = require 'colors'
 debug        = require('debug')('configure-octoblu-service')
 
 class Services
@@ -37,12 +38,13 @@ class Services
     template = fs.readFileSync file, "utf-8"
     filename = "octoblu-#{@projectName}#{outputFilename}"
 
-    debug "Writing file", filename
     contents = eco.render template, {
       project_name: @projectName
       namespace: 'octoblu'
     }
 
-    fs.writeFile path.join(@baseDir, @projectName, filename), contents, callback
+    filePath = path.join @baseDir, @projectName, filename
+    console.log colors.cyan 'WRITING:', filePath
+    fs.writeFile filePath, contents, callback
 
 module.exports = Services

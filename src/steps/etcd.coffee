@@ -2,6 +2,7 @@ _            = require 'lodash'
 async        = require 'async'
 fs           = require 'fs-extra'
 path         = require 'path'
+colors       = require 'colors'
 debug        = require('debug')('configure-octoblu-service')
 
 class Etcd
@@ -29,8 +30,11 @@ class Etcd
         @_writeFiles projectPath, callback
 
   _writeFiles: (projectPath, callback) =>
-    fs.writeFile path.join(projectPath, 'docker_url'), "quay.io/octoblu/#{@projectName}:v#{@version}", (error) =>
-      return callback error if error?
-      fs.writeFile path.join(projectPath, 'env', 'DEBUG'), 'nothing', callback
+    @_writeDebug projectPath, callback
+
+  _writeDebug: (projectPath, callback) =>
+    debugPath = path.join projectPath, 'env', 'DEBUG'
+    console.log colors.cyan 'WRITING:', debugPath
+    fs.writeFile debugPath, 'nothing', callback
 
 module.exports = Etcd

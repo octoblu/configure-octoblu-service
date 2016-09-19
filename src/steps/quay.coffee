@@ -1,13 +1,14 @@
 _       = require 'lodash'
 request = require 'request'
+async   = require 'async'
 debug   = require('debug')('configure-octoblu-service')
 
 QUAY_BASE_URL='https://quay.io/api/v1'
 
 class Quay
-  constructor: ({ @deployinateUrl, @projectName, @isPrivate, @quayToken }) ->
+  constructor: ({ @deployStateUri, @projectName, @isPrivate, @quayToken }) ->
     throw new Error 'Missing projectName argument' unless @projectName?
-    throw new Error 'Missing deployinateUrl argument' unless @deployinateUrl?
+    throw new Error 'Missing deployStateUri argument' unless @deployStateUri?
     throw new Error 'Missing quayToken argument' unless @quayToken?
 
   configure: (callback) =>
@@ -16,7 +17,7 @@ class Quay
       return callback error if error?
       @_createNotification callback
 
-  _isDeployinated: (callback) =>
+  _getNotifications: (callback) =>
     options =
       method: 'GET'
       uri: "/repository/octoblu/#{@projectName}/notification/"
@@ -24,9 +25,22 @@ class Quay
 
     @_request options, (error, body) =>
       return callback error if error?
-      exists = _.some body.notifications, { config: { url: @deployinateUrl } }
-      debug 'notifcation exists', exists
-      callback null, exists
+
+      # exists = _.some body.notifications, { config: { url: @deployStateUri } }
+      callback null, body.notifications
+
+  _deleteNotification: ({ uuid }, callback) =>
+    options =
+      method: 'DELETE'
+      uri: "/repository/octoblu/#{@projectName}/notification/#{uuid}"
+      json: true
+
+    @_request options, callback
+
+  _clearNotifications: (callback) =>
+    @_getNotifications (error, notifications) =>
+      return callback error if error?
+      async.each notifications, @_deleteNotification, callback
 
   _createNotification: (callback) =>
     debug 'create notification in quay', options
@@ -41,9 +55,8 @@ class Quay
         event: "repo_push"
         method: "webhook"
 
-    @_isDeployinated (error, exists) =>
+    @_clearNotifications (error) =>
       return callback error if error?
-      return callback null if exists
       @_request options, (error, body) =>
         return callback error if error?
         callback null
