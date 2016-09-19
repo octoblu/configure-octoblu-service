@@ -222,7 +222,7 @@ class Command
         console.log colors.bold "* Once it is all setup, point the domains to their respective clusters in Route53. (I am too scared to do it automatically)"
         console.log "  - so you'll the following domains pointed to the right service cluster"
         console.log "  - #{options.subdomain}.octoblu.com i.e. dualstack.service-cluster-1379831036.us-west-2.elb.amazonaws.com."
-        console.log "  - #{options.subdomain}.hpe.octoblu.com i.e. service-hpe-cluster-1351431065.us-east-1.elb.amazonaws.com."
+        console.log "  - #{options.subdomain}.hpe.octoblu.com i.e. dualstack.service-hpe-cluster-1351431065.us-east-1.elb.amazonaws.com."
         console.log ""
 
   die: (error) =>
