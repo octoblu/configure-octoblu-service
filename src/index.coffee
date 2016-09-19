@@ -19,7 +19,7 @@ class ConfigureService
     @etcd = new Etcd { clusters, projectName, rootDomain, subdomain }
     @services = new Services { projectName }
     @vulcand = new Vulcand { subdomain, rootDomain, clusters, projectName }
-    @project = new Project { projectName, isPrivate }
+    @project = new Project { projectName, isPrivate, deployStateUri }
 
   run: (callback) =>
     async.series [

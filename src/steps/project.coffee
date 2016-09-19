@@ -5,13 +5,14 @@ colors = require 'colors'
 debug  = require('debug')('configure-octoblu-service')
 
 class Project
-  constructor: ({ @projectName, @isPrivate }) ->
+  constructor: ({ @deployStateUri, @projectName, @isPrivate }) ->
     throw new Error 'Missing projectName argument' unless @projectName?
     throw new Error 'Missing isPrivate argument' unless @isPrivate?
+    throw new Error 'Missing deployStateUri argument' unless @deployStateUri?
     @PROJECT_DIR = "#{process.env.HOME}/Projects/Octoblu/#{@projectName}"
     @travisYml = path.join @PROJECT_DIR, '.travis.yml'
-    @deployStateWebhook = 'https://deploy-state.octoblu.com/deployments/travis-ci/com' if @isPrivate
-    @deployStateWebhook = 'https://deploy-state.octoblu.com/deployments/travis-ci/org' unless @isPrivate
+    @deployStateWebhook = "#{@deployStateUri}/deployments/travis-ci/com" if @isPrivate
+    @deployStateWebhook = "#{@deployStateUri}/deployments/travis-ci/org" unless @isPrivate
 
   configure: (callback) =>
     @_updateTravis callback

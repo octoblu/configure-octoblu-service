@@ -51,7 +51,7 @@ class Quay
         eventConfig: {}
         title: "Deploy State"
         config:
-          url: @deployStateUri
+          url: "#{@deployStateUri}/deployments/quay.io"
         event: "repo_push"
         method: "webhook"
 
